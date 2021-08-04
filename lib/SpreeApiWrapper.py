@@ -45,6 +45,14 @@ class SpreeApi(object):
 
         return requests.put(endpoint_url, json=product_data)
 
+    def list_products(self, page, per_page=50):
+        url = self.endpoint + '/api/v1/products?per_page=%s&page=%s' % (per_page, page)
+        endpoint_url = self.append_api_key(url)
+        try:
+            return requests.get(endpoint_url).json()['products']
+        except:
+            return []
+
     def create_properties(self, product_id, name, value):
         endpoint_url = self.append_api_key(self.endpoint + '/api/v1/products/%s/product_properties/%s' % (product_id, name))
         product_data = {'product_property': {'value': value}}
