@@ -1,7 +1,9 @@
 from lib import logger
 from lib.SpreeApiWrapper import SpreeApi
 from lib.config_loaders import IniConfigLoader
+from lib.feed_file_iterator import FeedFileIterator
 from shopping.content import common
+
 
 def run():
     default_file_path = 'config.ini'
@@ -24,6 +26,8 @@ def run():
         products = spree_api.list_products(page, per_page)
         for product in products:
             try:
+                google_merchant_id = product['google_merchant_id']
+                product_type = get_product_types(product['classifications'])
                 google_product = {
                     'offerId': product['google_merchant_id'],
                     'availability': 'in stock',
@@ -34,15 +38,19 @@ def run():
                     'contentLanguage': 'en',
                     'targetCountry': 'US',
                     'channel': 'online',
-                    'title': product['name'],
+                    'title': product['name'].title(),
                     'brand': product['main_brand'],
                     'gtin': product['barcode'],
                     'description': product['description'],
-                    'link': 'https://everymarket.com/products/'+product['slug'],
+                    'link': 'https://everymarket.com/products/' + product['slug'],
                     'imageLink': product['google_main_image'],
                     'condition': 'new',
-                    'productTypes': get_product_types(product['classifications'])
+                    'productTypes': product_type
                 }
+                print(product['google_merchant_id'].split('_')[-1])
+                if google_product['gtin'] is None or len(google_product['gtin']) == 0:
+                    google_product['mpn'] = product['google_merchant_id'].split('_')[-1]
+                    print(google_product['mpn'])
                 # print(get_product_types(product['classifications']))
                 request = service.products().insert(merchantId=merchant_id, body=google_product)
                 result = request.execute()
@@ -51,14 +59,27 @@ def run():
                 logger.exception(e)
 
         if len(products) < per_page:
-           break
+            break
         page += 1
+
 
 def get_product_types(classifications):
     result = []
+    pretty_names = [c['taxon']['pretty_name'] for c in classifications]
     for classification in classifications:
-        result.append(classification['taxon']['pretty_name'].replace('->', '>').replace('Department > ', ''))
-    return ', '.join(sorted(result, key=len, reverse=True)[0 : 5])
+        name = classification['taxon']['pretty_name']
+        parent = False
+        for pretty_name in pretty_names:
+            if name in pretty_name and name != pretty_name:
+                parent = True
+                break
+        if not parent:
+            c = classification['taxon']['pretty_name'].replace('->', '>').replace('Department > ', '').replace('Categories > ', '').replace(
+                'Categories', '')
+            if len(c) > 0:
+                result.append(c)
+    return ', '.join(sorted(result, key=len, reverse=True)[0: 5])
+
 
 if __name__ == '__main__':
     run()

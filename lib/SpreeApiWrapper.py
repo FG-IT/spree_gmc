@@ -130,9 +130,10 @@ class SpreeApi(object):
 
         return taxons
 
-    def find_taxon_by_name(self, name, parent_id, taxonomy_id=1):
+    def find_taxon_by_name(self, name, parent_id, taxonomy_id=1, per_page=300):
         try:
-            endpoint = '%s/api/v1/taxonomies/%s/taxons?q[name_cont]=%s&without_children=1' % (self.endpoint, taxonomy_id, name)
+            endpoint = '%s/api/v1/taxonomies/%s/taxons?q[name_cont]=%s&without_children=1&per_page=%s' % (
+            self.endpoint, taxonomy_id, name, per_page)
             endpoint = self.append_api_key(endpoint)
             response = requests.get(endpoint, timeout=180).json()
             for taxon in response['taxons']:
@@ -147,5 +148,6 @@ class SpreeApi(object):
         return None
 
     def append_api_key(self, url):
+        # 9YfMAJdlMbdWkrFk_MXaCP7uDH_yug4VtjyhYVWsYcM
         separator = '&' if '?' in url else '?'
         return url + '%stoken=%s' % (separator, self.api_key)
